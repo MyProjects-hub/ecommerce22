@@ -9,13 +9,13 @@ import { ProductsService } from '../products/products.service';
   styleUrls: ['./home.component.scss']
 })
 export class HomeComponent implements OnInit {
-  iphoneImg = "https://istyle.rs/media/catalog/product/cache/image/700x700/e9c3970ab036de70892d86c6d221abfe/c/z/czcs_iphone14promax_q422_space-black_pdp-images_position-1a_t_4_7.jpg";
+  iphoneImg = "https://www.mobilplanet.net/wp-content/uploads/2022/10/0174519_apple-iphone-14-pro-max-128gb-gold_550.jpeg";
   iphoneId = 4;
 
   macbookImg = "https://img.gigatron.rs/img/products/large/image62becf4b4c714.png";
   macbookId = 1;
 
-  ipadImg = "https://istyle.rs/media/catalog/product/cache/image/700x700/e9c3970ab036de70892d86c6d221abfe/i/p/ipad_pro_q123_wi-fi_11_in_4th_generation_silver_pdp_image_position-1a__wwce_t_t_4.jpg";
+  ipadImg = "https://d2u1z1lopyfwlx.cloudfront.net/thumbnails/0ecd2826-5afe-555f-9b8c-f22f14b77e2b/eaa96650-7862-5a59-af1e-3ce2d1490176.jpg";
   ipadId = 13;
 
   suggestedProducts!: any;
