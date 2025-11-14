@@ -60,6 +60,13 @@ npx cypress open
 
    The application will be available at `http://localhost:4200`.
 
+   ---
+## Note
+
+This project was created before the "chatgpt era" so I used it mostly to learn and experiment best practices in Angular at the time
+All the recent commits you see will be adding unit and e2e tests
+   ---
+
 ## Author
 
 - [@golubovicluka](https://github.com/golubovicluka)
