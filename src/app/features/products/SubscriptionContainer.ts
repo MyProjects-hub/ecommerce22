@@ -1,14 +1,18 @@
 import { Subscription } from "rxjs";
 
 export class SubscriptionContainer {
-  private subs: any[] = [];
+  private subs: Subscription[] = [];
 
-  add(s: Subscription | undefined) {
-    this.subs.push(s)
+  add(subscription: Subscription): void {
+    this.subs.push(subscription);
   }
 
-  dispose() {
-    this.subs.forEach(s => s.unsubscribe());
+  dispose(): void {
+    this.subs.forEach(subscription => {
+      if (subscription && !subscription.closed) {
+        subscription.unsubscribe();
+      }
+    });
+    this.subs = [];
   }
-
 }

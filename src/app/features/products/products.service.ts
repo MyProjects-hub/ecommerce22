@@ -2,6 +2,29 @@ import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 import { Apollo, gql } from 'apollo-angular';
 
+// Common fragment for product fields
+const PRODUCT_FIELDS = gql`
+  fragment ProductFields on product {
+    EAN
+    categoryId
+    subcategoryId
+    description
+    id
+    images
+    inStock
+    name
+    price
+    category {
+      id
+      name
+    }
+    subcategory {
+      id
+      name
+    }
+  }
+`;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -11,293 +34,189 @@ export class ProductsService {
 
   constructor(private apollo: Apollo) { }
 
-  setCategoryFilter(category: string) {
+  setCategoryFilter(category: string): void {
     this.categoryFilter$.next(category);
   }
 
   // Get all products (including sortBy and category)
   getProducts(sortBy?: string, category?: string) {
-    const categoryQuery = category ? `where: {category: {name: {_eq: "${category}"}}},` : '';
-    const sortByQuery = sortBy ? `order_by: {price: ${sortBy}},` : '';
-
-    return this.apollo
-      .watchQuery({
+    if (category && sortBy) {
+      return this.apollo.watchQuery({
         query: gql`
-          {
-            product(${categoryQuery}${sortByQuery}) {
-                  EAN
-                  categoryId
-                  subcategoryId
-                  description
-                  id
-                  images
-                  inStock
-                  name
-                  price
-                  category {
-                    id
-                    name
-                  }
-                  subcategory {
-                    id
-                    name
-                  }
-                }
+          query GetProducts($category: String!, $sortBy: order_by!) {
+            product(where: {category: {name: {_eq: $category}}}, order_by: {price: $sortBy}) {
+              ...ProductFields
+            }
           }
+          ${PRODUCT_FIELDS}
         `,
-      }).valueChanges
+        variables: { category, sortBy }
+      }).valueChanges;
+    } else if (category) {
+      return this.apollo.watchQuery({
+        query: gql`
+          query GetProductsByCategory($category: String!) {
+            product(where: {category: {name: {_eq: $category}}}) {
+              ...ProductFields
+            }
+          }
+          ${PRODUCT_FIELDS}
+        `,
+        variables: { category }
+      }).valueChanges;
+    } else if (sortBy) {
+      return this.apollo.watchQuery({
+        query: gql`
+          query GetProductsSorted($sortBy: order_by!) {
+            product(order_by: {price: $sortBy}) {
+              ...ProductFields
+            }
+          }
+          ${PRODUCT_FIELDS}
+        `,
+        variables: { sortBy }
+      }).valueChanges;
+    } else {
+      return this.getProductsDefault();
+    }
   }
 
   getProductsDefault() {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-          {
-            product {
-                  EAN
-                  categoryId
-                  subcategoryId
-                  description
-                  id
-                  images
-                  inStock
-                  name
-                  price
-                  category {
-                    id
-                    name
-                  }
-                  subcategory {
-                    id
-                    name
-                  }
-                }
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetProductsDefault {
+          product {
+            ...ProductFields
           }
-        `,
-      }).valueChanges
+        }
+        ${PRODUCT_FIELDS}
+      `
+    }).valueChanges;
   }
 
-  // TODO: Add after valueChanges if requests are happening too quickly .pipe(debounce(() => interval(500)))
   getProductsByPrice(priceFrom: number, priceTo: number) {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-          {
-            product(where: {price: {_gte: "${priceFrom}", _lte: "${priceTo}"}}) {
-                  EAN
-                  categoryId
-                  description
-                  id
-                  images
-                  inStock
-                  name
-                  price
-                  subcategoryId
-                  subcategory {
-                    id
-                    name
-                  }
-                  category {
-                    name
-                    id
-                  }
-                }
-          }`,
-      }).valueChanges
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetProductsByPrice($priceFrom: numeric!, $priceTo: numeric!) {
+          product(where: {price: {_gte: $priceFrom, _lte: $priceTo}}) {
+            ...ProductFields
+          }
+        }
+        ${PRODUCT_FIELDS}
+      `,
+      variables: {
+        priceFrom,
+        priceTo
+      }
+    }).valueChanges;
   }
 
   searchProducts(searchInput: string) {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-          {
-            product(where: { name: { _ilike: "%${searchInput}%" } }) {
-              EAN
-              categoryId
-              subcategoryId
-              description
-              id
-              inStock
-              images
-              name
-              price
-              subcategory {
-                name
-                id
-              }
-              category {
-                name
-                id
-              }
-        }}
-        `,
-      }).valueChanges
-  }
-
-  getProductBySubcategory(category: string) {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-        {
-          product(where: {subCategory: {_like: "%${category}%"}}) {
-          id
-          category
-          description
-          images
-          inStock
-          name
-          price
-          productId
-          subCategory
-        }}
-      `
-      }).valueChanges
+    return this.apollo.watchQuery({
+      query: gql`
+        query SearchProducts($searchInput: String!) {
+          product(where: { name: { _ilike: $searchInput } }) {
+            ...ProductFields
+          }
+        }
+        ${PRODUCT_FIELDS}
+      `,
+      variables: {
+        searchInput: `%${searchInput}%`
+      }
+    }).valueChanges;
   }
 
   getProductById(id: number) {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-        {
-          product(where: { id: { _eq: ${id} } }) {
-            EAN
-            categoryId
-            subcategoryId
-            description
-            id
-            inStock
-            images
-            name
-            price
-            subcategory {
-              name
-              id
-            }
-            category {
-              name
-              id
-            }
-          }}`
-      }).valueChanges
-  }
-
-  getProductsFromSubcategories(categories: string[]) {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-        {
-          product(where: { subCategory: { _in: ${categories} } }) {
-          subCategory
-          productId
-          price
-          name
-          inStock
-          images
-          id
-          description
-          category
-      }}`
-      }).valueChanges
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetProductById($id: Int!) {
+          product(where: { id: { _eq: $id } }) {
+            ...ProductFields
+          }
+        }
+        ${PRODUCT_FIELDS}
+      `,
+      variables: {
+        id
+      }
+    }).valueChanges;
   }
 
   getProductsByCategory(category: string) {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-      {
-        product(where: {category: {name: {_eq: "${category}"}}}) {
-          EAN
-          categoryId
-          subcategoryId
-          description
-          id
-          inStock
-          images
-          name
-          price
-          subcategory {
-            name
-            id
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetProductsByCategory($category: String!) {
+          product(where: {category: {name: {_eq: $category}}}) {
+            ...ProductFields
           }
-          category {
-            name
-            id
-          }
-        }}`
-      }).valueChanges
+        }
+        ${PRODUCT_FIELDS}
+      `,
+      variables: {
+        category
+      }
+    }).valueChanges;
   }
 
   getFilteredProducts(filter: string[]) {
     if (filter.length === 0) {
       return this.getProductsDefault();
     }
-    return this.apollo
-      .watchQuery({
-        query: gql`
-      {
-        product(where: {subcategory: {name: {_in: [${filter.map(f => `"${f}"`)}]}}}) {
-          EAN
-          categoryId
-          subcategoryId
-          description
-          id
-          inStock
-          images
-          name
-          price
-          subcategory {
-            name
-            id
+
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetFilteredProducts($filter: [String!]!) {
+          product(where: {subcategory: {name: {_in: $filter}}}) {
+            ...ProductFields
           }
-          category {
-            name
-            id
-          }
-        }}`
-      }).valueChanges
+        }
+        ${PRODUCT_FIELDS}
+      `,
+      variables: {
+        filter
+      }
+    }).valueChanges;
   }
 
   // Get categories and subcategories for filter component
   getProductCategories() {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-          {
-            category {
-          id
-          name
-          subcategories {
-            name
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetProductCategories {
+          category {
             id
-            categoryId
+            name
+            subcategories {
+              name
+              id
+              categoryId
+            }
           }
-        }}
-        `,
-      }).valueChanges
+        }
+      `
+    }).valueChanges;
   }
 
   getSuggestedProducts() {
-    return this.apollo
-      .watchQuery({
-        query: gql`
-        {
-        product(limit: 10) {
-          EAN
-          categoryId
-          description
-          id
-          inStock
-          images
-          name
-          price
-          subcategory {
-            name
-            id
+    return this.apollo.watchQuery({
+      query: gql`
+        query GetSuggestedProducts {
+          product(limit: 10) {
+            ...ProductFields
           }
-          category {
-            name
-            id
-          }}}`,
-      }).valueChanges
+        }
+        ${PRODUCT_FIELDS}
+      `
+    }).valueChanges;
+  }
+
+  // Legacy methods for backward compatibility
+  getProductBySubcategory(category: string) {
+    return this.getProductsByCategory(category);
+  }
+
+  getProductsFromSubcategories(categories: string[]) {
+    return this.getFilteredProducts(categories);
   }
 }
