@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, filter, Observable, of } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { Product } from '../features/products/Product';
-import { ProductComponent } from '../features/products/product/product.component';
 
 @Injectable({
   providedIn: 'root'
@@ -11,9 +10,14 @@ export class WishlistService {
   wishListItemsObservable = this.wishListItems$.asObservable();
 
   constructor() {
-    const wishList = localStorage.getItem('wishlist');
-    if (wishList) {
-      this.wishListItems$.next(JSON.parse(wishList));
+    try {
+      const wishList = localStorage.getItem('wishlist');
+      if (wishList) {
+        this.wishListItems$.next(JSON.parse(wishList));
+      }
+    } catch (error) {
+      console.error('Failed to load wishlist items from localStorage:', error);
+      this.wishListItems$.next([]);
     }
   }
 
@@ -25,19 +29,26 @@ export class WishlistService {
     return this.wishListItems$.value.some(product => product.id === id);
   }
 
-  addWishListItem(item: Product) {
+  addWishListItem(item: Product): void {
     const currentItems = [...this.wishListItems$.value, item];
 
-    localStorage.setItem('wishlist', JSON.stringify(currentItems));
-    this.wishListItems$.next(currentItems);
+    try {
+      localStorage.setItem('wishlist', JSON.stringify(currentItems));
+      this.wishListItems$.next(currentItems);
+    } catch (error) {
+      console.error('Failed to save wishlist items to localStorage:', error);
+    }
   }
 
-  removeWishListItem(item: Product) {
-    let currentItems = this.wishListItems$.value;
-    currentItems = currentItems.filter(product => product.id !== item.id);
-    localStorage.setItem('wishlist', JSON.stringify(currentItems));
+  removeWishListItem(item: Product): void {
+    const currentItems = this.wishListItems$.value.filter(product => product.id !== item.id);
 
-    this.wishListItems$.next(currentItems);
+    try {
+      localStorage.setItem('wishlist', JSON.stringify(currentItems));
+      this.wishListItems$.next(currentItems);
+    } catch (error) {
+      console.error('Failed to save wishlist items to localStorage:', error);
+    }
   }
 }
 

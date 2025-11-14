@@ -10,28 +10,37 @@ export class CartService {
   cartItems = this.cartItems$.asObservable();
 
   constructor() {
-    const cartItems = localStorage.getItem('cart');
-    if (cartItems) this.cartItems$.next(JSON.parse(cartItems));
+    try {
+      const cartItems = localStorage.getItem('cart');
+      if (cartItems) {
+        this.cartItems$.next(JSON.parse(cartItems));
+      }
+    } catch (error) {
+      console.error('Failed to load cart items from localStorage:', error);
+      this.cartItems$.next([]);
+    }
   }
 
-  addToCart(item: Product) {
+  addToCart(item: Product): void {
     const currentItems = [...this.cartItems$.value, item];
-    const serializedItems = JSON.stringify(currentItems);
 
     try {
-      localStorage.setItem('cart', serializedItems);
+      localStorage.setItem('cart', JSON.stringify(currentItems));
+      this.cartItems$.next(currentItems);
     } catch (error) {
       console.error('Failed to save cart items to localStorage:', error);
-      return;
     }
-
-    this.cartItems$.next(currentItems);
   }
 
-  removeFromCart(item: Product) {
-    const currentItems = this.cartItems$.value.filter(product => product?.id !== item?.id);
-    localStorage.setItem('cart', JSON.stringify(currentItems));
-    this.cartItems$.next(currentItems);
+  removeFromCart(item: Product): void {
+    const currentItems = this.cartItems$.value.filter(product => product.id !== item.id);
+
+    try {
+      localStorage.setItem('cart', JSON.stringify(currentItems));
+      this.cartItems$.next(currentItems);
+    } catch (error) {
+      console.error('Failed to save cart items to localStorage:', error);
+    }
   }
 
   getCartItems(): Observable<Product[]> {
@@ -52,7 +61,7 @@ export class CartService {
     );
   }
 
-  inCart(id: number) {
+  inCart(id: number): boolean {
     return this.cartItems$.value.some(product => product.id === id);
   }
 
